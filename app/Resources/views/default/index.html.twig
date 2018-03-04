@@ -1,0 +1,205 @@
+{% extends 'base.html.twig' %}
+
+{% block title %}Актуальный курс Евро{% endblock %}
+
+{% block body %}
+    <div id="main-block">
+		<div id="describe-title">Актуальный курс Евро</div>
+		<div id="flags-wrap">
+			<div id="m1-wrap">
+				<img src=euro-icon.png height=100px/>
+				<br />
+				Евро
+				<br />
+				(EUR)
+				<div class="ex-value">...</div>
+			</div>
+			<div id="divider"> <img src=arrows.png height=30px id=changeDir /> </div>
+			<div id="m2-wrap">
+				<img src=ru-icon.png height=100px/>
+				<br />
+				Российский рубль
+				<br />
+				(RUB)
+				<div class="ex-value">...</div>
+			</div>
+		</div>
+		<div class="info-panel">
+			Источник: <a id="ex-source-src" target="_blank"><span id="ex-source">Загрузка...</span></a>
+			<br />
+			Время последнего обновления: <i><span id="ex-last-upd">Загрузка...</span></i></span>
+			<br />
+			<span id="ex-refresh">Обновить сейчас</span>
+		</div>
+    </div>
+{% endblock %}
+
+{% block stylesheets %}
+<style>
+	@import url('https://fonts.googleapis.com/css?family=Montserrat');
+	*{
+		margin:0;
+		padding:0;
+	}
+    body { background: #F5F5F5; }
+    #main-block{
+		box-shadow:0px 0px 2px 1px #444;
+		background:#23667c;
+		background:linear-gradient(60deg , #23667c 0% , #6596a6 40%, #23667c 100%);
+		height:400px;
+		margin-top:100px;
+		width:700px;
+		margin-left: calc((100% - 700px) /2);
+		font-family: 'Montserrat', sans-serif;
+	}
+	#describe-title{
+		color:#ddd;
+		font-size:35px;
+		width:calc(100% - 20px);
+		word-wrap:break-word;
+		text-align:center;
+		padding-top:20px;
+		padding-bottom:20px;
+		padding-left:10px;
+		padding-right:10px;
+	}
+	#flags-wrap>div{
+		float:left;
+	}
+	#flags-wrap{
+		width:100%;
+		z-index:11;
+		position:relative;
+		font-size:15px;
+	}
+	#divider{
+		display:inline-block;
+		vertical-align:middle;
+		height:100px;
+		line-height:100px;
+		width:100px;
+		text-align:center;
+		color:#ddd;
+		font-size:50px;
+	}
+	#m1-wrap , #m2-wrap{
+		width: calc((100% - 100px) / 2);
+		text-align:center;
+		color:#ddd;
+	}
+	.ex-value{
+		font-size:55px;
+		margin-top:25px;
+		margin-bottom:25px;
+	}
+	.info-panel{
+		color:#444;
+		width:100%;
+		position:relative;
+		right:20px;
+		text-align:right;
+		font-size:12px;
+		z-index:10;
+	}
+	a:active , a:hover , a:link , a:visited{
+		color:#acc;
+	}
+	#ex-refresh{
+		text-decoration:underline;
+		color:orange;
+		cursor:pointer;
+	}
+	
+	#changeDir{
+		cursor:pointer;
+	}
+	
+	@media only screen and (max-width: 700px){
+		#flags-wrap>div{
+			clear:both;
+		} 	
+		#main-block{
+			min-height:900px;
+			width:100%;
+			margin-left:0;
+			margin-bottom:50px;
+			margin-top:50px;
+		}
+		.info-panel{
+			float:inline-end;
+			text-align:center;
+			right:0px;
+		}
+		#divider{
+			height:50px;
+			line-height:20px;
+			text-align:center;
+			width:100%;
+		}
+		#m1-wrap , #m2-wrap{
+			width:100%;
+		}
+	}
+</style>
+{% endblock %}
+
+{% block javascripts %}
+	var direction = 1;
+	var _GLOB_VAL = 1;
+	var _GLOB_M = "#m1-wrap";
+	var _GLOB_S = "#m2-wrap";
+	var firstload = true;
+	
+	function refreshEx(){
+		$("#ex-refresh").html("Загрузка...").css({"color":"orange"});
+		
+		$.ajax({"method":"GET", "url":"/exchangeRate/API/Euro", "success":function(data){
+			firstload = false;
+			var obj = $.parseJSON(data);
+			$("#ex-refresh").html("Обновить сейчас").css({"color":"#acc"});
+			obj.val = Math.floor(obj.val*10000)/10000;
+			_GLOB_VAL = obj.val;
+			if(direction==0)
+				obj.val = Math.floor(1/obj.val*10000)/10000;
+			$("#m1-wrap .ex-value").html("1.0")
+			if(direction==1)
+				$("#m2-wrap .ex-value").html(obj.val)
+			$("#ex-last-upd").html(obj.upd_datetime)
+			$("#ex-source-src").attr({"href":obj.main_href})
+			$("#ex-source").html(obj.src_name);
+		},"error":function(){
+			$("#ex-refresh").html("Загрузка не удалась! Повторить загрузку").css({"color":"red"});
+		}})
+	}
+	refreshEx();
+	
+	_timeout_handle = setInterval(refreshEx, 10000)
+	
+	$("#ex-refresh").on("click", function(){
+		clearTimeout(_timeout_handle)
+		_timeout_handle = setInterval(refreshEx, 10000);
+		refreshEx();
+		});
+	
+	$("#changeDir").on("click", function(){
+		direction = (direction+1)%2;
+		if(direction==1){
+			_GLOB_M = "#m1-wrap";
+			_GLOB_S = "#m2-wrap";
+		}else{
+			_GLOB_M = "#m2-wrap";
+			_GLOB_S = "#m1-wrap";
+		}
+		
+		var _g_M_num = "...";
+		var _g_S_num = "...";
+		if(!firstload){
+			_g_M_num = ((direction==1)?"1.0":(Math.floor(1/_GLOB_VAL*10000)/10000))
+			_g_S_num = ((direction==1)?_GLOB_VAL:"1.0")
+		}
+		
+		$(_GLOB_M).html("<img src=euro-icon.png height=100px/><br />Евро<br />(EUR)<div class=\"ex-value\">"+_g_M_num+"</div>");
+		$(_GLOB_S).html("<img src=ru-icon.png height=100px/><br />Российский рубль<br />(RUB)<div class=\"ex-value\">"+_g_S_num+"</div>");
+		
+	})
+{% endblock %}
